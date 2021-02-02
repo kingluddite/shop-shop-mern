@@ -6,11 +6,12 @@ import {
 } from "../../utils/actions";
 import { useStoreContext } from "../../utils/GlobalState";
 import { QUERY_CATEGORIES } from "../../utils/queries";
+import { idbPromise } from "../../utils/helpers";
 
 function CategoryMenu() {
   const [state, dispatch] = useStoreContext();
   const { categories } = state;
-  const { data: categoryData } = useQuery(QUERY_CATEGORIES);
+  const { loading, data: categoryData } = useQuery(QUERY_CATEGORIES);
 
   useEffect(() => {
     if (categoryData) {
@@ -18,8 +19,19 @@ function CategoryMenu() {
         type: UPDATE_CATEGORIES,
         categories: categoryData.categories,
       });
+
+      categoryData.categories.forEach((category) => {
+        idbPromise("categories", "put", category);
+      });
+    } else if (!loading) {
+      idbPromise("categories", "get").then((categories) => {
+        dispatch({
+          type: UPDATE_CATEGORIES,
+          categories,
+        });
+      });
     }
-  }, [categoryData, dispatch]);
+  }, [categoryData, loading, dispatch]);
 
   const handleClick = (id) => {
     dispatch({
@@ -33,6 +45,7 @@ function CategoryMenu() {
       <h2>Choose a Category:</h2>
       {categories.map((item) => (
         <button
+          type="button"
           key={item._id}
           onClick={() => {
             handleClick(item._id);
